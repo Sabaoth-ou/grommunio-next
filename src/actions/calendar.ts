@@ -60,6 +60,8 @@ type postEventDataParams = {
   event: Event;
 };
 export function postEventData(event: Event) {
+
+  console.log("rawEvent",...[formatEvent(event)])
   return defaultPostHandler(
     postEvent,
     POST_EVENT_DATA,
@@ -102,26 +104,27 @@ export const deleteEventData = createAsyncThunk<
 });
 
 function formatEvent(rawEvent: any): Event {
-  const { id, subject, location, notes, startDate, endDate } =
-    rawEvent;
+  const { title, location, notes, startDate, endDate, attendees, timeZone,isOnlineMeeting ,isAllDay} = rawEvent.event;
   return {
-    id,
-    subject,
+    subject: title === "" ? "(No subject)" : title,
     body: {
       contentType: "text",
       content: notes,
     },
     start: {
       dateTime: startDate,
-      timeZone: "America/Los_Angeles", // TODO: Remove hardcoded timezone
+      timeZone: timeZone, // TODO: Remove hardcoded timezone
     },
     end: {
       dateTime: endDate,
-      timeZone: "America/Los_Angeles", // TODO: Remove hardcoded timezone
+      timeZone: timeZone, // TODO: Remove hardcoded timezone
     },
     location: {
       displayName: location,
     },
+    attendees: attendees,
+    isOnlineMeeting:isOnlineMeeting,
+    isAllDay: isAllDay,
   };
 }
 

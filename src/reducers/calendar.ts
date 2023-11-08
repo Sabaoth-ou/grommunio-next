@@ -40,6 +40,11 @@ function formatEvents(rawEvents: Array<Event>) {
     title: rawEvent.subject,
     location: rawEvent.location?.displayName || '',
     notes: rawEvent.body?.content || '',
+    attendees: rawEvent.attendees,
+    onlineMeetingUrl: rawEvent.onlineMeetingUrl,
+    isOnlineMeeting: rawEvent.isOnlineMeeting,
+    onlineMeetingProvider:rawEvent.onlineMeetingProvider,
+    isAllDay:rawEvent.isAllDay
   }))
 }
 
