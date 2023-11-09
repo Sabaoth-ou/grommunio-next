@@ -199,7 +199,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
         content: "",
         startDate: moment().toISOString(),
         endDate: moment().add(30, 'minutes').toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // TODO: Remove hardcoded timezone
+        timeZone: "", // TODO: Remove hardcoded timezone
         location:"",
         attendees:[],
         isOnlineMeeting: false,
@@ -312,7 +312,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       ...appointmentChanges,
     };
 
-    const { attendees, isOnlineMeeting, isAllDay, startDate } = appointmentChanges
+    const { attendees, isOnlineMeeting, isAllDay } = appointmentChanges
     const isNewAppointment = appointmentData.id === undefined;
 
     const applyChanges = () =>
@@ -764,7 +764,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     tinymceScriptSrc={
                       process.env.PUBLIC_URL + "/tinymce/tinymce.min.js"
                     }
-                    initialValue={displayAppointmentData["notes"] || appointmentChanges.notes}
+                    value={displayAppointmentData["notes"] || appointmentChanges.notes}
                     init={{
                       menubar: false,
                       readonly: true,
