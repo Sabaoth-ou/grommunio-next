@@ -199,7 +199,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
         content: "",
         startDate: moment().toISOString(),
         endDate: moment().add(30, 'minutes').toISOString(),
-        timeZone: "", // TODO: Remove hardcoded timezone
+        timeZone: moment.tz.guess(), // 
         location:"",
         attendees:[],
         isOnlineMeeting: false,
@@ -258,12 +258,17 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     } else {
       commitChanges({ [type]: appointment });
     }
-    if(this.state.isAllDay === true)
-      this.setState({
-        appointmentChanges: {
-
-        },
-      });
+    this.setState({appointmentChanges: {
+      title: "",
+      content: "",
+      startDate: moment().toISOString(),
+      endDate: moment().add(30, 'minutes').toISOString(),
+      timeZone: moment.tz.guess(), // 
+      location:"",
+      attendees:[],
+      isOnlineMeeting: false,
+      isAllDay:false
+    }});
   }
 
   componentDidMount() {
