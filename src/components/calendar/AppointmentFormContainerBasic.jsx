@@ -198,12 +198,12 @@ class AppointmentFormContainerBasic extends React.PureComponent {
         title: "",
         content: "",
         startDate: moment().toISOString(),
-        endDate: moment().add(30, 'minutes').toISOString(),
-        timeZone: moment.tz.guess(), // 
-        location:"",
-        attendees:[],
+        endDate: moment().add(30, "minutes").toISOString(),
+        timeZone: moment.tz.guess(), //
+        location: "",
+        attendees: [],
         isOnlineMeeting: false,
-        isAllDay:false
+        isAllDay: false,
       },
       anchorEl: null,
       selectedOption: "",
@@ -215,6 +215,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       contactData: [],
       showDropdown: false,
       skypeMeeting: true,
+      email:""
     };
 
     this.getAppointmentData = () => {
@@ -258,25 +259,28 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     } else {
       commitChanges({ [type]: appointment });
     }
-    this.setState({appointmentChanges: {
-      title: "",
-      content: "",
-      startDate: moment().toISOString(),
-      endDate: moment().add(30, 'minutes').toISOString(),
-      timeZone: moment.tz.guess(), // 
-      location:"",
-      attendees:[],
-      isOnlineMeeting: false,
-      isAllDay:false
-    }});
+    this.setState({
+      appointmentChanges: {
+        title: "",
+        content: "",
+        startDate: moment().toISOString(),
+        endDate: moment().add(30, "minutes").toISOString(),
+        timeZone: moment.tz.guess(), //
+        location: "",
+        attendees: [],
+        isOnlineMeeting: false,
+        isAllDay: false,
+      },
+    });
   }
 
   componentDidMount() {
-    const { fetchUserCalenders, app, contacts } = this.props;
-    fetchUserCalenders(app);
+    const { fetchContactsData, app, contacts } = this.props;
+    fetchContactsData(app);
     this.setState({ gabContacts: contacts });
     this.setState({ contactData: contacts });
     document.addEventListener("click", this.handleClickOutside);
+    console.log("fetchContactsData",fetchContactsData(app))
   }
 
   componentWillUnmount() {
@@ -310,6 +314,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       selectedStartDate,
       contactData,
       showDropdown,
+      email
     } = this.state;
 
     const displayAppointmentData = {
@@ -317,12 +322,19 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       ...appointmentChanges,
     };
 
-    const { attendees, isOnlineMeeting, isAllDay } = appointmentChanges
+    const { attendees, isOnlineMeeting, isAllDay } = appointmentChanges;
     const isNewAppointment = appointmentData.id === undefined;
 
     const applyChanges = () =>
       this.commitAppointment(isNewAppointment ? "added" : "changed");
 
+    const isEmailValid = (email) => {
+      // Add your email validation logic here
+      // For simplicity, I'm using a basic regex pattern
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailPattern.test(email);
+    };
+    
     const handleInputChange = (field, newValue) => {
       // Check if the field is "Invite attendees"
       if (field === "Invite attendees") {
@@ -332,6 +344,10 @@ class AppointmentFormContainerBasic extends React.PureComponent {
             contact.displayName.toLowerCase().includes(newValue.toLowerCase())
           ),
         }));
+        this.setState({ email: newValue });
+        if (isEmailValid(newValue) && !contactData.includes(newValue)) {
+          contactData([...contactData, {emailAddress:{address:newValue}}]);
+        }
       } else {
         // Handle other fields
         this.handleValue(field, newValue);
@@ -375,14 +391,16 @@ class AppointmentFormContainerBasic extends React.PureComponent {
         // Define an event handler for when the date picker's date changes
         onChange: (date) => {
           // Call the changeAppointment function with the field and the new date
-          handleInputChange(field, date.toISOString())
+          handleInputChange(field, date.toISOString());
           // Set the selected start date in the component's state
           this.setState({ selectedStartDate: date });
         },
 
         // Define an error handling function, in this case, it does nothing
         onError: () => null,
-        value: moment(displayAppointmentData[field]) || moment(appointmentChanges.field),
+        value:
+          moment(displayAppointmentData[field]) ||
+          moment(appointmentChanges.field),
         // Apply a CSS class to the date picker
         className: classes.picker,
       };
@@ -408,7 +426,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     const handleSwitch = () => {
       const newisAllDay = !isAllDay;
       this.handleValue("isAllDay", newisAllDay);
-      pickerSize = !    displayAppointmentData["isAllDay"] || !isAllDay;
+      pickerSize = !displayAppointmentData["isAllDay"] || !isAllDay;
     };
 
     const AllDay = displayAppointmentData["isAllDay"] || isAllDay;
@@ -437,18 +455,18 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       "subscript superscript | code | searchreplace | ";
 
     // Function to handle the selection of contacts
-    const handleContactSelect = (contact) => {
+    const handleContactSelect = (emailAddresses) => {
       // Map through the email addresses of the selected contact and add them to attendees
-      const updatedAttendees = contact.emailAddresses.map((data) => {
+      const updatedAttendees = emailAddresses.map((data) => {
         return { emailAddress: data };
       });
-    
+      
       // Combine the existing attendees and the newly selected attendees
       const combinedAttendees = [...attendees, ...updatedAttendees];
-    
+
       // Call the handleValue function to update the attendees property
       this.handleValue("attendees", combinedAttendees);
-    
+
       // Close the contact dropdown by setting showDropdown to false
       this.setState({ showDropdown: false });
     };
@@ -467,7 +485,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     const defaultchipData = displayAppointmentData["attendees"] || attendees;
 
     // Function to toggle the online meeting status
-    const toggleIsOnlineMeeting  = () => {
+    const toggleIsOnlineMeeting = () => {
       const newIsOnlineMeeting = !isOnlineMeeting;
       this.handleValue("isOnlineMeeting", newIsOnlineMeeting);
     };
@@ -576,10 +594,9 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     handleDelete={handleDelete}
                   />
                   <TextField
+                    {...textEditorProps("Invite attendees")}
                     variant="standard"
                     onClick={() => this.setState({ showDropdown: true })}
-                    placeholder="Invite attendees"
-                    className={classes.textField}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">Optional</InputAdornment>
@@ -594,7 +611,6 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                       width: "100%",
                       maxWidth: 300,
                       bgcolor: "background.paper",
-                      height: "250px", // Set your desired height
                       boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)", // Add box shadow
                       overflowY: "scroll", // Enable vertical scroll
                       position: "absolute", // Set position to absolute
@@ -609,7 +625,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     {contactData.map((contact) => (
                       <ListItemButton
                         key={contact.id}
-                        onClick={() => handleContactSelect(contact)}
+                        onClick={() => handleContactSelect(contact.emailAddresses)}
                       >
                         <ListItemAvatar>
                           <Avatar
@@ -639,9 +655,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     <div className={classes.flexRow}>
                       <DatePicker {...startDatePickerProps} />
                       {!AllDay && (
-                        <TimePicker
-                          {...startDatePickerProps}
-                          ampm={false}/>
+                        <TimePicker {...startDatePickerProps} ampm={false} />
                       )}
                       <span
                         style={{
@@ -665,6 +679,10 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                           <select
                             name="Timezone"
                             id="Timezone"
+                            value={
+                              displayAppointmentData["timeZone"] ||
+                              moment.tz.guess()
+                            }
                             style={{ width: "160px", color: "grey" }}
                             {...textEditorProps("timeZone")}
                           >
@@ -691,10 +709,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                         minDate={selectedStartDate}
                       />
                       {!AllDay && (
-                        <TimePicker
-                          {...endDatePickerProps}
-                          ampm={false}
-                        />
+                        <TimePicker {...endDatePickerProps} ampm={false} />
                       )}
                       <div className={classes.wrapper}>
                         <label htmlFor="Repeat">
@@ -769,7 +784,10 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     tinymceScriptSrc={
                       process.env.PUBLIC_URL + "/tinymce/tinymce.min.js"
                     }
-                    value={displayAppointmentData["notes"] || appointmentChanges.notes}
+                    value={
+                      displayAppointmentData["notes"] ||
+                      appointmentChanges.notes
+                    }
                     init={{
                       menubar: false,
                       readonly: true,
@@ -798,7 +816,7 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    fetchUserCalenders: async (props) =>
+    fetchContactsData: async (props) =>
       await dispatch(fetchContactsData(props)),
   };
 };

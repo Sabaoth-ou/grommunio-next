@@ -108,7 +108,7 @@ function formatEvent(rawEvent: any): Event {
   return {
     subject: title === "" ? "(No subject)" : title,
     body: {
-      contentType: "text",
+      contentType: "html",
       content: notes,
     },
     start: {
