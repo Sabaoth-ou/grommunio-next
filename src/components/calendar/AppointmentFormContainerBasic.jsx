@@ -215,7 +215,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       contactData: [],
       showDropdown: false,
       skypeMeeting: true,
-      email:""
+      email: "",
     };
 
     this.getAppointmentData = () => {
@@ -275,12 +275,19 @@ class AppointmentFormContainerBasic extends React.PureComponent {
   }
 
   componentDidMount() {
-    const { fetchContactsData, app, contacts } = this.props;
+    const { fetchContactsData, app } = this.props;
     fetchContactsData(app);
-    this.setState({ gabContacts: contacts });
-    this.setState({ contactData: contacts });
     document.addEventListener("click", this.handleClickOutside);
-    console.log("fetchContactsData",fetchContactsData(app))
+  }
+
+  componentDidUpdate(prevProps) {
+    // Check if contacts have been updated
+    if (prevProps.contacts !== this.props.contacts) {
+      // Assuming contacts is an array of contact data
+      const { contacts } = this.props;
+      // Set gabContacts and contactData in the state
+      this.setState({ gabContacts: contacts, contactData: contacts });
+    }
   }
 
   componentWillUnmount() {
@@ -314,7 +321,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       selectedStartDate,
       contactData,
       showDropdown,
-      email
+      email,
     } = this.state;
 
     const displayAppointmentData = {
@@ -334,7 +341,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailPattern.test(email);
     };
-    
+
     const handleInputChange = (field, newValue) => {
       // Check if the field is "Invite attendees"
       if (field === "Invite attendees") {
@@ -344,9 +351,9 @@ class AppointmentFormContainerBasic extends React.PureComponent {
             contact.displayName.toLowerCase().includes(newValue.toLowerCase())
           ),
         }));
-        this.setState({ email: newValue });
+
         if (isEmailValid(newValue) && !contactData.includes(newValue)) {
-          contactData([...contactData, {emailAddress:{address:newValue}}]);
+          this.setState({ email: newValue });
         }
       } else {
         // Handle other fields
@@ -455,14 +462,22 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       "subscript superscript | code | searchreplace | ";
 
     // Function to handle the selection of contacts
-    const handleContactSelect = (emailAddresses) => {
+    const handleContactSelect = (emailAddresses, datatype) => {
       // Map through the email addresses of the selected contact and add them to attendees
-      const updatedAttendees = emailAddresses.map((data) => {
-        return { emailAddress: data };
-      });
-      
+
       // Combine the existing attendees and the newly selected attendees
-      const combinedAttendees = [...attendees, ...updatedAttendees];
+      let combinedAttendees;
+      if (datatype === "array") {
+        const updatedAttendees = emailAddresses.map((data) => {
+          return { emailAddress: data };
+        });
+        combinedAttendees = [...attendees, ...updatedAttendees];
+      } else {
+        combinedAttendees = [
+          ...attendees,
+          { emailAddress: { address: email } },
+        ];
+      }
 
       // Call the handleValue function to update the attendees property
       this.handleValue("attendees", combinedAttendees);
@@ -489,6 +504,8 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       const newIsOnlineMeeting = !isOnlineMeeting;
       this.handleValue("isOnlineMeeting", newIsOnlineMeeting);
     };
+
+    console.log("attendees", attendees);
 
     return (
       <Dialog open={visible} onClose={onHide} maxWidth="md" fullWidth={true}>
@@ -619,32 +636,45 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                       left: 90,
                     }}
                   >
-                    <ListItem>
-                      <ListItemText primary="Suggested contacts" />
-                    </ListItem>
-                    {contactData.map((contact) => (
+                    {email && (
                       <ListItemButton
-                        key={contact.id}
-                        onClick={() => handleContactSelect(contact.emailAddresses)}
+                        onClick={() => handleContactSelect(email, "string")}
                       >
-                        <ListItemAvatar>
-                          <Avatar
-                            className={classes.avatar}
-                            style={{
-                              backgroundColor: getRandomColor(),
-                            }}
-                          >
-                            {contact.displayName.charAt(0).toUpperCase()}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={contact.displayName}
-                          secondary={contact.emailAddresses
-                            ?.map((obj) => obj.address)
-                            .join(", ")}
-                        />
+                        {/* <ListItemText
+                          secondary={`Use this email address: ${email}`}
+                        /> */}
+                        <p style={{fontSize:'12px'}}>Use this email address <span style={{textDecoration:"underline"}}>{email}</span></p>
                       </ListItemButton>
-                    ))}
+                    )}
+                    {contactData.length === 0 ? (
+                      <ListItem>No results found</ListItem>
+                    ) : (
+                      contactData.map((contact) => (
+                        <ListItemButton
+                          key={contact.id}
+                          onClick={() =>
+                            handleContactSelect(contact.emailAddresses, "array")
+                          }
+                        >
+                          <ListItemAvatar>
+                            <Avatar
+                              className={classes.avatar}
+                              style={{
+                                backgroundColor: getRandomColor(),
+                              }}
+                            >
+                              {contact.displayName.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={contact.displayName}
+                            secondary={contact.emailAddresses
+                              ?.map((obj) => obj.address)
+                              .join(", ")}
+                          />
+                        </ListItemButton>
+                      ))
+                    )}
                   </List>
                 )}
               </div>
