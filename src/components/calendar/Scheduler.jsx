@@ -4,7 +4,10 @@ import { styled } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import Grid from "@mui/material/Grid";
-import { ViewState, EditingState } from "@devexpress/dx-react-scheduler";
+import {
+  ViewState,
+  EditingState,
+} from "@devexpress/dx-react-scheduler";
 import {
   Scheduler,
   Toolbar,
@@ -168,6 +171,7 @@ class ScheduleCalendar extends React.PureComponent {
 
   onAddedAppointmentChange(addedAppointment) {
     this.setState({ addedAppointment });
+
     const { editingAppointment } = this.state;
     if (editingAppointment !== undefined) {
       this.setState({
@@ -259,6 +263,8 @@ class ScheduleCalendar extends React.PureComponent {
       startDayHour,
       endDayHour,
     } = this.state;
+
+    console.log("data", data)
 
     return (
       <Paper sx={{ flex: 1 }}>
@@ -353,10 +359,6 @@ class ScheduleCalendar extends React.PureComponent {
           onClick={() => {
             this.setState({ editingFormVisible: true });
             this.onEditingAppointmentChange(undefined);
-            this.onAddedAppointmentChange({
-              startDate: new Date(currentDate).setHours(startDayHour),
-              endDate: new Date(currentDate).setHours(startDayHour + 1),
-            });
           }}
         >
           <AddIcon />
@@ -457,89 +459,85 @@ const UserCalenders = ({ data }) => {
                 height: 38,
               }}
             >
-
               <ListItemText
                 primary={item.name}
                 primaryTypographyProps={{ ml: 2 }}
               />
-              {
-                selectedItem === index &&
-                item.isDisabled && (
-                  <span>
-                    <IconButton
-                      aria-label="more"
-                      id="long-button"
-                      aria-controls={open ? "long-menu" : undefined}
-                      aria-expanded={open ? "true" : undefined}
-                      aria-haspopup="true"
-                      onClick={handleClick}
-                      edge="end"
-                      style={{ color: "white" }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                    <Menu
-                      MenuListProps={{
-                        "aria-labelledby": "long-button",
-                      }}
-                      anchorEl={anchorEl}
-                      open={open2}
-                      onClose={handleClose}
-                      id="account-menu"
-                      transformOrigin={{
-                        horizontal: "left",
-                        vertical: "bottom",
-                      }}
-                      anchorOrigin={{ horizontal: "left", vertical: "top" }}
-                      PaperProps={{
-                        elevation: 0,
-                        sx: {
-                          overflow: "visible",
-                          filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
-                          mt: 1.5,
-                          "& .MuiAvatar-root": {
-                            width: 32,
-                            height: 32,
-                            ml: -0.5,
-                            mr: 1,
-                          },
-                          "&:before": {
-                            content: '""',
-                            display: "block",
-                            position: "absolute",
-                            top: 0,
-                            right: 14,
-                            width: 10,
-                            height: 10,
-                            bgcolor: "background.paper",
-                            transform: "translateY(-50%) rotate(45deg)",
-                            zIndex: 0,
-                          },
+              {selectedItem === index && item.isDisabled && (
+                <span>
+                  <IconButton
+                    aria-label="more"
+                    id="long-button"
+                    aria-controls={open ? "long-menu" : undefined}
+                    aria-expanded={open ? "true" : undefined}
+                    aria-haspopup="true"
+                    onClick={handleClick}
+                    edge="end"
+                    style={{ color: "white" }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                  <Menu
+                    MenuListProps={{
+                      "aria-labelledby": "long-button",
+                    }}
+                    anchorEl={anchorEl}
+                    open={open2}
+                    onClose={handleClose}
+                    id="account-menu"
+                    transformOrigin={{
+                      horizontal: "left",
+                      vertical: "bottom",
+                    }}
+                    anchorOrigin={{ horizontal: "left", vertical: "top" }}
+                    PaperProps={{
+                      elevation: 0,
+                      sx: {
+                        overflow: "visible",
+                        filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
+                        mt: 1.5,
+                        "& .MuiAvatar-root": {
+                          width: 32,
+                          height: 32,
+                          ml: -0.5,
+                          mr: 1,
                         },
-                      }}
+                        "&:before": {
+                          content: '""',
+                          display: "block",
+                          position: "absolute",
+                          top: 0,
+                          right: 14,
+                          width: 10,
+                          height: 10,
+                          bgcolor: "background.paper",
+                          transform: "translateY(-50%) rotate(45deg)",
+                          zIndex: 0,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem onClick={handleClose}>
+                      <span
+                        onClick={() => dispatch(deleteCalendarData(item.id))}
+                      >
+                        <IconButton>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                        Delete
+                      </span>
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => handleClickOpen2(item.id, item.name)}
                     >
-                      <MenuItem onClick={handleClose}>
-                        <span
-                          onClick={() =>
-                            dispatch(deleteCalendarData(item.id))
-                          }
-                        >
-                          <IconButton>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                          Delete
-                        </span>
-                      </MenuItem>
-                      <MenuItem onClick={() => handleClickOpen2(item.id, item.name)}>
-                        <ListItemIcon>
-                          <EditIcon fontSize="small" />
-                        </ListItemIcon>
-                        Edit
-                      </MenuItem>
-                    </Menu>
-                  </span>
-                )
-              }
+                      <ListItemIcon>
+                        <EditIcon fontSize="small" />
+                      </ListItemIcon>
+                      Edit
+                    </MenuItem>
+                  </Menu>
+                </span>
+              )}
             </ListItemButton>
           ))}
       </List>

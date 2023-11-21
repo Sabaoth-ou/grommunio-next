@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2020-2023 grommunio GmbH
 
 import moment from "moment";
-import * as DOMPurify from 'dompurify'; 
+import * as DOMPurify from 'dompurify';
 import { rgbToHex } from "@mui/material";
 
 export type URLParams = {

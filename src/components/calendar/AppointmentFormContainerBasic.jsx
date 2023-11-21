@@ -40,6 +40,9 @@ import ListItemButton from "@mui/material/ListItemButton";
 import Avatar from "@mui/material/Avatar";
 import { fetchContactsData } from "../../actions/contacts";
 import { connect } from "react-redux";
+import Chip from "@mui/material/Chip";
+import Paper from "@mui/material/Paper";
+import TagFacesIcon from "@mui/icons-material/TagFaces";
 
 const PREFIX = "Demo";
 const classes = {
@@ -191,18 +194,28 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     super(props);
 
     this.state = {
-      appointmentChanges: {},
+      appointmentChanges: {
+        title: "",
+        content: "",
+        startDate: moment().toISOString(),
+        endDate: moment().add(30, "minutes").toISOString(),
+        timeZone: moment.tz.guess(), //
+        location: "",
+        attendees: [],
+        isOnlineMeeting: false,
+        isAllDay: false,
+      },
       anchorEl: null,
       selectedOption: "",
       attachment: null,
-      selectedTimezone: moment.tz.guess(),
       timezones: moment.tz.names(),
-      ButtonSwitch: true,
       showCustomItem: true,
       selectedStartDate: null,
       gabContacts: [],
       contactData: [],
       showDropdown: false,
+      skypeMeeting: true,
+      email: "",
     };
 
     this.getAppointmentData = () => {
@@ -225,6 +238,14 @@ class AppointmentFormContainerBasic extends React.PureComponent {
     this.setState({ appointmentChanges: nextChanges });
   }
 
+  handleValue(field, value) {
+    console.log("value", value);
+    this.changeAppointment({
+      field: [field],
+      changes: value,
+    });
+  }
+
   commitAppointment(type) {
     const { commitChanges } = this.props;
     const appointment = {
@@ -239,30 +260,50 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       commitChanges({ [type]: appointment });
     }
     this.setState({
-      appointmentChanges: {},
+      appointmentChanges: {
+        title: "",
+        content: "",
+        startDate: moment().toISOString(),
+        endDate: moment().add(30, "minutes").toISOString(),
+        timeZone: moment.tz.guess(), //
+        location: "",
+        attendees: [],
+        isOnlineMeeting: false,
+        isAllDay: false,
+      },
     });
   }
 
   componentDidMount() {
-    const { fetchUserCalenders, app, contacts } = this.props;
-    fetchUserCalenders(app);
-    this.setState({ gabContacts: contacts });
-    this.setState({ contactData: contacts });
-    document.addEventListener('click', this.handleClickOutside);
-    // console.log(">>", contacts)
+    const { fetchContactsData, app } = this.props;
+    fetchContactsData(app);
+    document.addEventListener("click", this.handleClickOutside);
+  }
+
+  componentDidUpdate(prevProps) {
+    // Check if contacts have been updated
+    if (prevProps.contacts !== this.props.contacts) {
+      // Assuming contacts is an array of contact data
+      const { contacts } = this.props;
+      // Set gabContacts and contactData in the state
+      this.setState({ gabContacts: contacts, contactData: contacts });
+    }
   }
 
   componentWillUnmount() {
-    document.removeEventListener('click', this.handleClickOutside);
+    document.removeEventListener("click", this.handleClickOutside);
   }
 
   // Handle clicks outside the input field
   handleClickOutside = (event) => {
-    if (this.inputRef.current && !this.inputRef.current.contains(event.target)) {
+    if (
+      this.inputRef.current &&
+      !this.inputRef.current.contains(event.target)
+    ) {
       // Clicked outside the element, so hide it
-      this.setState({ showDropdown: false })
+      this.setState({ showDropdown: false });
     }
-  }
+  };
 
   render() {
     const {
@@ -276,29 +317,34 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       appointmentChanges,
       anchorEl,
       selectedOption,
-      selectedTimezone,
       timezones,
-      ButtonSwitch,
       selectedStartDate,
       contactData,
       showDropdown,
+      email,
     } = this.state;
 
     const displayAppointmentData = {
       ...appointmentData,
       ...appointmentChanges,
     };
+
+    const { attendees, isOnlineMeeting, isAllDay } = appointmentChanges;
     const isNewAppointment = appointmentData.id === undefined;
+
     const applyChanges = () =>
       this.commitAppointment(isNewAppointment ? "added" : "changed");
+
+    const isEmailValid = (email) => {
+      // Add your email validation logic here
+      // For simplicity, I'm using a basic regex pattern
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailPattern.test(email);
+    };
 
     const handleInputChange = (field, newValue) => {
       // Check if the field is "Invite attendees"
       if (field === "Invite attendees") {
-        this.changeAppointment({
-          field: [field],
-          changes: newValue,
-        });
         // Filter GAB contacts based on user input
         this.setState((prevState) => ({
           contactData: prevState.gabContacts.filter((contact) =>
@@ -306,110 +352,95 @@ class AppointmentFormContainerBasic extends React.PureComponent {
           ),
         }));
 
+        if (isEmailValid(newValue) && !contactData.includes(newValue)) {
+          this.setState({ email: newValue });
+        }
       } else {
         // Handle other fields
-        this.changeAppointment({
-          field: [field],
-          changes: newValue,
-        });
+        this.handleValue(field, newValue);
       }
     };
 
     const textEditorProps = (field) => ({
+      // Set the variant of the text editor to "outlined"
       variant: "outlined",
+
+      // Define an event handler for the "onChange" event
       onChange: (event) => {
         const newValue = event.target.value;
+        // Call the handleInputChange function with the field and the new value
         handleInputChange(field, newValue);
       },
-      value: displayAppointmentData[field] || "",
+
+      // Set the initial value of the text editor to the value of the corresponding field
+      value: displayAppointmentData[field] || appointmentChanges.field,
+      // Set a placeholder text that is the field name capitalized (e.g., "Title" for "title")
       placeholder: field[0].toUpperCase() + field.slice(1),
-      className: classes.textField,
+
+      // Determine the CSS class based on the field type
+      // If the field is "timeZone," use the "customSelect" class; otherwise, use "textField"
+      className:
+        field === "timeZone" ? classes.customSelect : classes.textField,
     });
 
     const handleClick = (event) => {
+      // Set the anchor element to the event's current target, used for displaying a pop-up menu
       this.setState({ anchorEl: event.currentTarget });
     };
 
     const handleOptionClick = (option) => () => {
+      // Set the selected option and close the pop-up menu
       this.setState({ selectedOption: option, anchorEl: null });
     };
 
-    const getDateOrTime = (date, field_name, get_for_field_name) => {
-      if (field_name === get_for_field_name) {
-        return date;
-      }
-      let currentDate = displayAppointmentData[get_for_field_name] || undefined;
-      return moment(currentDate);
-    };
-
-    const dateDefaultValue = !ButtonSwitch ? moment() : null;
     const pickerEditorProps = (field) => {
       return {
+        // Define an event handler for when the date picker's date changes
         onChange: (date) => {
-          let currentDate;
-          let currentTime;
-          if (field == "endDate" || field == "endTime") {
-            currentDate = getDateOrTime(date, field, "endDate");
-            currentTime = getDateOrTime(date, field, "endTime");
-          } else {
-            currentDate = getDateOrTime(date, field, "startDate");
-            currentTime = getDateOrTime(date, field, "startTime");
-            this.setState({ selectedStartDate: date });
-          }
-          let newDateTime = moment(
-            currentDate.format("YYYYMMDD") + currentTime.format("hhmm"),
-            "YYYYMMDDhhmm"
-          ).tz(selectedTimezone);
-
-          this.changeAppointment({
-            field: [field],
-            changes: newDateTime.toDate(),
-          });
+          // Call the changeAppointment function with the field and the new date
+          handleInputChange(field, date.toISOString());
+          // Set the selected start date in the component's state
+          this.setState({ selectedStartDate: date });
         },
-        ampm: false,
+
+        // Define an error handling function, in this case, it does nothing
         onError: () => null,
+        value:
+          moment(displayAppointmentData[field]) ||
+          moment(appointmentChanges.field),
+        // Apply a CSS class to the date picker
         className: classes.picker,
-        minDate: field === "endDate" ? selectedStartDate : undefined,
       };
     };
 
-    const startTimePickerProps = pickerEditorProps("startTime");
-    const endTimePickerProps = pickerEditorProps("endTime");
+    // Define properties for the start date picker by invoking pickerEditorProps with "startDate" as the field
     const startDatePickerProps = pickerEditorProps("startDate");
+
+    // Define properties for the end date picker by invoking pickerEditorProps with "endDate" as the field
     const endDatePickerProps = pickerEditorProps("endDate");
 
+    // Function to cancel changes, resetting the appointmentChanges object and handling visibility changes
     const cancelChanges = () => {
       this.setState({
         appointmentChanges: {},
       });
+      // Call the visibleChange and cancelAppointment functions
       visibleChange();
       cancelAppointment();
     };
 
-    const timezoneHandlechange = (event) => {
-      this.setState({ selectedTimezone: event.target.value });
-    };
-
+    // Function to handle a switch event, toggling the isAllDay state, pickerSize, and changing start and end date appointments
     const handleSwitch = () => {
-      this.setState({ ButtonSwitch: !ButtonSwitch });
-      pickerSize = !pickerSize;
-
-      this.changeAppointment({
-        startDate: "startDate",
-        changes: dateDefaultValue,
-      });
-
-      this.changeAppointment({
-        endDate: "endDate",
-        changes: dateDefaultValue,
-      });
+      const newisAllDay = !isAllDay;
+      this.handleValue("isAllDay", newisAllDay);
+      pickerSize = !displayAppointmentData["isAllDay"] || !isAllDay;
     };
 
+    const AllDay = displayAppointmentData["isAllDay"] || isAllDay;
+
+    // Function to handle changes in the editor content and update the "notes" field in the appointment data
     const handleEditorChange = (content, editor) => {
-      this.changeAppointment({
-        field: ["note"],
-        changes: content,
-      });
+      this.handleValue("notes", content);
     };
 
     function getRandomColor() {
@@ -430,13 +461,51 @@ class AppointmentFormContainerBasic extends React.PureComponent {
       "link unlink image | table | removeformat | " +
       "subscript superscript | code | searchreplace | ";
 
-    const handleContactSelect = (contact) => {
-      this.changeAppointment({
-        field: ["Invite attendees"],
-        changes: contact.emailAddresses?.map((obj) => obj.address).join(", "),
-      });
+    // Function to handle the selection of contacts
+    const handleContactSelect = (emailAddresses, datatype) => {
+      // Map through the email addresses of the selected contact and add them to attendees
+
+      // Combine the existing attendees and the newly selected attendees
+      let combinedAttendees;
+      if (datatype === "array") {
+        const updatedAttendees = emailAddresses.map((data) => {
+          return { emailAddress: data };
+        });
+        combinedAttendees = [...attendees, ...updatedAttendees];
+      } else {
+        combinedAttendees = [
+          ...attendees,
+          { emailAddress: { address: email } },
+        ];
+      }
+
+      // Call the handleValue function to update the attendees property
+      this.handleValue("attendees", combinedAttendees);
+
+      // Close the contact dropdown by setting showDropdown to false
       this.setState({ showDropdown: false });
     };
+
+    // Function to handle the deletion of a chip (contact)
+    const handleDelete = (chipToDelete) => () => {
+      this.setState((prevState) => ({
+        // Remove the chip with the specified ID from the chipData array
+        chipData: prevState.chipData.filter(
+          (chip) => chip.id !== chipToDelete.id
+        ),
+      }));
+    };
+
+    // Initialize the default chip data based on the "attendees" field in displayAppointmentData
+    const defaultchipData = displayAppointmentData["attendees"] || attendees;
+
+    // Function to toggle the online meeting status
+    const toggleIsOnlineMeeting = () => {
+      const newIsOnlineMeeting = !isOnlineMeeting;
+      this.handleValue("isOnlineMeeting", newIsOnlineMeeting);
+    };
+
+    console.log("attendees", attendees);
 
     return (
       <Dialog open={visible} onClose={onHide} maxWidth="md" fullWidth={true}>
@@ -467,6 +536,35 @@ class AppointmentFormContainerBasic extends React.PureComponent {
               >
                 {isNewAppointment ? "Create" : "Save"}
               </Button>
+              {displayAppointmentData["onlineMeetingUrl"] && (
+                <a
+                  href={displayAppointmentData["onlineMeetingUrl"] || "#"}
+                  target="_blank"
+                >
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    style={{ marginLeft: "15px" }}
+                  >
+                    <span
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "30px",
+                      }}
+                    >
+                      <p
+                        data-icon-name="IcFluentOfficeSkypeColor"
+                        aria-hidden="true"
+                      >
+                        <Skypeicon />
+                      </p>
+                      <p>Join Skype meeting</p>
+                    </span>
+                  </Button>
+                </a>
+              )}
               <div>
                 <Button
                   aria-controls="outlook-dropdown"
@@ -503,31 +601,33 @@ class AppointmentFormContainerBasic extends React.PureComponent {
             <div className={classes.content}>
               <div className={classes.flexRow}>
                 <Create className={classes.icon} color="action" />
-                <TextField
-                  {...textEditorProps("Add a title")}
-                  variant="standard"
-                />
+                <TextField {...textEditorProps("title")} variant="standard" />
               </div>
               <div className={classes.flexRow}>
                 <PersonAddAltIcon className={classes.icon} color="action" />
-                <TextField
-                  {...textEditorProps("Invite attendees")}
-                  variant="standard"
-                  onClick={() => this.setState({ showDropdown: true })}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">Optional</InputAdornment>
-                    ),
-                  }}
-                  ref={this.inputRef}
-                />
+                <div style={{ width: "100%" }}>
+                  <ChipsArray
+                    chipData={defaultchipData}
+                    handleDelete={handleDelete}
+                  />
+                  <TextField
+                    {...textEditorProps("Invite attendees")}
+                    variant="standard"
+                    onClick={() => this.setState({ showDropdown: true })}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">Optional</InputAdornment>
+                      ),
+                    }}
+                    ref={this.inputRef}
+                  />
+                </div>
                 {showDropdown && (
                   <List
                     sx={{
                       width: "100%",
                       maxWidth: 300,
                       bgcolor: "background.paper",
-                      height: "250px", // Set your desired height
                       boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)", // Add box shadow
                       overflowY: "scroll", // Enable vertical scroll
                       position: "absolute", // Set position to absolute
@@ -535,34 +635,46 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                       top: 169,
                       left: 90,
                     }}
-                   
                   >
-                    <ListItem>
-                      <ListItemText primary="Suggested contacts" />
-                    </ListItem>
-                    {contactData.map((contact) => (
+                    {email && (
                       <ListItemButton
-                        key={contact.id}
-                        onClick={() => handleContactSelect(contact)}
+                        onClick={() => handleContactSelect(email, "string")}
                       >
-                        <ListItemAvatar>
-                          <Avatar
-                            className={classes.avatar}
-                            style={{
-                              backgroundColor: getRandomColor(),
-                            }}
-                          >
-                            {contact.displayName.charAt(0).toUpperCase()}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={contact.displayName}
-                          secondary={contact.emailAddresses
-                            ?.map((obj) => obj.address)
-                            .join(", ")}
-                        />
+                        {/* <ListItemText
+                          secondary={`Use this email address: ${email}`}
+                        /> */}
+                        <p style={{fontSize:'12px'}}>Use this email address <span style={{textDecoration:"underline"}}>{email}</span></p>
                       </ListItemButton>
-                    ))}
+                    )}
+                    {contactData.length === 0 ? (
+                      <ListItem>No results found</ListItem>
+                    ) : (
+                      contactData.map((contact) => (
+                        <ListItemButton
+                          key={contact.id}
+                          onClick={() =>
+                            handleContactSelect(contact.emailAddresses, "array")
+                          }
+                        >
+                          <ListItemAvatar>
+                            <Avatar
+                              className={classes.avatar}
+                              style={{
+                                backgroundColor: getRandomColor(),
+                              }}
+                            >
+                              {contact.displayName.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={contact.displayName}
+                            secondary={contact.emailAddresses
+                              ?.map((obj) => obj.address)
+                              .join(", ")}
+                          />
+                        </ListItemButton>
+                      ))
+                    )}
                   </List>
                 )}
               </div>
@@ -571,11 +683,10 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                 <LocalizationProvider dateAdapter={AdapterMoment}>
                   <div>
                     <div className={classes.flexRow}>
-                      <DatePicker
-                        {...startDatePickerProps}
-                        defaultValue={dateDefaultValue}
-                      />
-                      {ButtonSwitch && <TimePicker {...startTimePickerProps} />}
+                      <DatePicker {...startDatePickerProps} />
+                      {!AllDay && (
+                        <TimePicker {...startDatePickerProps} ampm={false} />
+                      )}
                       <span
                         style={{
                           marginTop: "15px",
@@ -590,7 +701,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                         />
                         <span>All day</span>
                       </span>
-                      {ButtonSwitch && (
+                      {!AllDay && (
                         <div className={classes.wrapper}>
                           <label htmlFor="Timezone">
                             <LanguageIcon color="primary" />
@@ -598,10 +709,12 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                           <select
                             name="Timezone"
                             id="Timezone"
-                            className={classes.customSelect}
-                            style={{ width: "160px" }}
-                            value={selectedTimezone}
-                            onChange={timezoneHandlechange}
+                            value={
+                              displayAppointmentData["timeZone"] ||
+                              moment.tz.guess()
+                            }
+                            style={{ width: "160px", color: "grey" }}
+                            {...textEditorProps("timeZone")}
                           >
                             <option value={moment.tz.guess()}>
                               {moment.tz.guess()}
@@ -623,9 +736,11 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     <div className={classes.flexRow}>
                       <DatePicker
                         {...endDatePickerProps}
-                        defaultValue={dateDefaultValue}
+                        minDate={selectedStartDate}
                       />
-                      {ButtonSwitch && <TimePicker {...endTimePickerProps} />}
+                      {!AllDay && (
+                        <TimePicker {...endDatePickerProps} ampm={false} />
+                      )}
                       <div className={classes.wrapper}>
                         <label htmlFor="Repeat">
                           <RepeatIcon color="primary" />
@@ -643,7 +758,11 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                             "Yearly",
                             "Custom",
                           ].map((x, index) => (
-                            <option value={x} key={index}>
+                            <option
+                              value={x}
+                              key={index}
+                              style={{ color: "black" }}
+                            >
                               {x}
                             </option>
                           ))}
@@ -671,6 +790,7 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                         >
                           <AntSwitch
                             inputProps={{ "aria-label": "ant design" }}
+                            onClick={toggleIsOnlineMeeting}
                           />
                           <i
                             data-icon-name="IcFluentOfficeSkypeColor"
@@ -694,7 +814,10 @@ class AppointmentFormContainerBasic extends React.PureComponent {
                     tinymceScriptSrc={
                       process.env.PUBLIC_URL + "/tinymce/tinymce.min.js"
                     }
-                    initialValue={displayAppointmentData["note"] || ""}
+                    value={
+                      displayAppointmentData["notes"] ||
+                      appointmentChanges.notes
+                    }
                     init={{
                       menubar: false,
                       readonly: true,
@@ -723,7 +846,7 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    fetchUserCalenders: async (props) =>
+    fetchContactsData: async (props) =>
       await dispatch(fetchContactsData(props)),
   };
 };
@@ -732,3 +855,45 @@ export default connect(
   mapStateToProps,
   mapDispatchToProps
 )(AppointmentFormContainerBasic);
+
+const ChipListItem = styled("li")(({ theme }) => ({
+  margin: theme.spacing(0.5),
+}));
+
+export function ChipsArray({ chipData, handleDelete }) {
+  return (
+    <Paper
+      sx={{
+        display: "flex",
+        flexWrap: "wrap",
+        listStyle: "none",
+        p: 0,
+        m: 0,
+        border: "none",
+      }}
+      component="ul"
+    >
+      {chipData?.map((data, index) => {
+        let icon;
+
+        if (data.label === "React") {
+          icon = <TagFacesIcon />;
+        }
+
+        return (
+          <ChipListItem key={index}>
+            <Chip
+              icon={icon}
+              label={data.emailAddress.address}
+              onDelete={
+                data.emailAddress.address === "React"
+                  ? undefined
+                  : handleDelete(index)
+              }
+            />
+          </ChipListItem>
+        );
+      })}
+    </Paper>
+  );
+}

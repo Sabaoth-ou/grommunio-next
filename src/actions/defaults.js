@@ -13,6 +13,7 @@ export function defaultPostHandler(endpoint, actionType, ...endpointProps) {
       return data;
     } catch (error) {
       await dispatch(pushAlertStack({ message: error?.message || "", severity: "error" }));
+      console.log({"error":error})
       return false;
     }
   }
